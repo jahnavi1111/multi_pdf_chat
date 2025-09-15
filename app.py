@@ -4,6 +4,9 @@ from PyPDF2 import PdfReader #for handling pdfs
 from langchain.text_splitter import CharacterTextSplitter #for text splitting
 from langchain.embeddings import OpenAIEmbeddings, HuggingFaceInstructEmbeddings
 from langchain.vectorstores import FAISS
+from langchain.chat_models import ChatOpenAI
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationalRetrievalChain
 
 def get_pdf_text(pdf_docs):
     text = ""
@@ -26,14 +29,28 @@ def get_text_chunks(raw_text):
 def get_vector_store(text_chunks):
     #embeddings = OpenAIEmbeddings() #embedding model object
     embeddings = HuggingFaceInstructEmbeddings(model_name = 'hkunlp/instructor-xl') #https://huggingface.co/hkunlp/instructor-xl
-    vectorstore = FAISS.from_texts(texts = text_chunks, embedding = embeddings) 
+    vector_store = FAISS.from_texts(texts = text_chunks, embedding = embeddings) 
     #calls the embedding model on each tex chunk to generate embeddings and stores them in FAISS vector store
-    return vectorstore
+    return vector_store
+
+def get_conversation_chain(vector_store):
+    llm = ChatOpenAI()
+    memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True)
+    conversation_chain = ConversationalRetrievalChain.from_llm(
+        llm=llm,
+        retriever=vector_store.as_retriever(),
+        memory=memory
+    )
+    return conversation_chain
         
 
 def main():
     load_dotenv()
     st.set_page_config(page_title = "Chat with multiple PDFs", page_icon=":books:")
+
+    if "conversation" not in st.session_state:
+        # for when application re-runs itself (same instance), set it to None it it's not being initialized
+        st.session_state.conversation = None 
 
     st.header("Chat with multiple PDFs :books:")
     st.text_input("Ask a question about your uploaded documents:")
@@ -54,6 +71,9 @@ def main():
                 # create vector store
                 vector_store = get_vector_store(text_chunks)
 
+                #create conversation chain
+                conversation = get_conversation_chain(vector_store)
+                # use st.session_state.conversation -- to make conversation persistent over time, and also would be available outside of it's scope
 
 
 
