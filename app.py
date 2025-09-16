@@ -1,14 +1,19 @@
 import streamlit as st #for GUI
 from dotenv import load_dotenv #load keys
 from PyPDF2 import PdfReader #for handling pdfs
-from langchain.text_splitter import CharacterTextSplitter #for text splitting
-from langchain.embeddings import OpenAIEmbeddings, HuggingFaceInstructEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.chat_models import ChatOpenAI
-from langchain.memory import ConversationBufferMemory
+
+
+from langchain_text_splitters import CharacterTextSplitter
+from langchain_community.vectorstores import FAISS
+from langchain_community.llms import HuggingFacePipeline
+from langchain.memory.buffer import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
+from langchain_huggingface import HuggingFaceEmbeddings
+
+from transformers import pipeline
 from htmlTemplates import css, bot_template, user_template
-from langchain.llms import HuggingFaceHub
+
+
 
 def get_pdf_text(pdf_docs):
     text = ""
@@ -21,7 +26,7 @@ def get_pdf_text(pdf_docs):
 def get_text_chunks(raw_text):
     text_splitter = CharacterTextSplitter(
         separator="\n",
-        chunk_size = 1000,
+        chunk_size = 400,
         chunk_overlap = 200,
         length_function=len
         )
@@ -30,34 +35,37 @@ def get_text_chunks(raw_text):
 
 def get_vector_store(text_chunks):
     # embeddings = OpenAIEmbeddings() #embedding model object
-    embeddings = HuggingFaceInstructEmbeddings(model_name = 'hkunlp/instructor-xl') #https://huggingface.co/hkunlp/instructor-xl
+    # embeddings = HuggingFaceInstructEmbeddings(model_name = 'hkunlp/instructor-xl') #https://huggingface.co/hkunlp/instructor-xl
+    embeddings = HuggingFaceEmbeddings(model_name='sentence-transformers/all-MiniLM-L6-v2')
     vector_store = FAISS.from_texts(texts = text_chunks, embedding = embeddings) 
     #calls the embedding model on each tex chunk to generate embeddings and stores them in FAISS vector store
     return vector_store
 
 def get_conversation_chain(vector_store):
-    # llm = ChatOpenAI()
-    llm = HuggingFaceHub(repo_id="google/flan-t5-xxl", 
-                         model_kwargs={"temperature":0.5, "max_length":512},
-                         task="text2text-generation"  # Required argument
-                         )
+    # Use smaller, MPS-friendly model
+    pipe = pipeline("text2text-generation", model="google/flan-t5-base", max_length=512)
+
+    llm = HuggingFacePipeline(pipeline=pipe)
+
     memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True)
+
     conversation_chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
         retriever=vector_store.as_retriever(),
         memory=memory
     )
+
     return conversation_chain
 
 def handle_userinput(user_question):
-    response = st.session_state.conversation({'question': user_question})
+    response = st.session_state.conversation.invoke({'question': user_question})
     st.session_state.chat_history = response['chat_history']
 
     for i, message in enumerate(st.session_state.chat_history):
         if i % 2 == 0:
             st.write(user_template.replace("{{MSG}}", message.content), unsafe_allow_html=True)
         else:
-            st.write(bot_template.replace("{{MSG}}", "Hello Human"), unsafe_allow_html=True)
+            st.write(bot_template.replace("{{MSG}}", message.content), unsafe_allow_html=True)
 
         
 
