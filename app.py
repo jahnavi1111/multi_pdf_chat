@@ -49,7 +49,7 @@ def main():
     st.set_page_config(page_title = "Chat with multiple PDFs", page_icon=":books:")
 
     if "conversation" not in st.session_state:
-        # for when application re-runs itself (same instance), set it to None it it's not being initialized
+        # for when application re-runs itself (same session while the appn is open), set it to None if it's not being initialized
         st.session_state.conversation = None 
 
     st.header("Chat with multiple PDFs :books:")
@@ -72,8 +72,8 @@ def main():
                 vector_store = get_vector_store(text_chunks)
 
                 #create conversation chain
-                conversation = get_conversation_chain(vector_store)
-                # use st.session_state.conversation -- to make conversation persistent over time, and also would be available outside of it's scope
+                #conversation = get_conversation_chain(vector_store)
+                st.session_state.conversation = get_conversation_chain(vector_store) # use to make conversation persistent over time, and also would be available outside of it's scope
 
 
 
