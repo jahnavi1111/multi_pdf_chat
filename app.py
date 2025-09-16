@@ -28,8 +28,8 @@ def get_text_chunks(raw_text):
     return chunks
 
 def get_vector_store(text_chunks):
-    #embeddings = OpenAIEmbeddings() #embedding model object
-    embeddings = HuggingFaceInstructEmbeddings(model_name = 'hkunlp/instructor-xl') #https://huggingface.co/hkunlp/instructor-xl
+    embeddings = OpenAIEmbeddings() #embedding model object
+    # embeddings = HuggingFaceInstructEmbeddings(model_name = 'hkunlp/instructor-xl') #https://huggingface.co/hkunlp/instructor-xl
     vector_store = FAISS.from_texts(texts = text_chunks, embedding = embeddings) 
     #calls the embedding model on each tex chunk to generate embeddings and stores them in FAISS vector store
     return vector_store
@@ -43,6 +43,10 @@ def get_conversation_chain(vector_store):
         memory=memory
     )
     return conversation_chain
+
+def handle_userinput(user_question):
+    response = st.session_state.conversation({'question': user_question})
+    st.write(response)
         
 
 def main():
@@ -56,10 +60,12 @@ def main():
         st.session_state.conversation = None 
 
     st.header("Chat with multiple PDFs :books:")
-    st.text_input("Ask a question about your uploaded documents:")
+    user_question = st.text_input("Ask a question about your uploaded documents:")
+    if user_question:
+        handle_userinput(user_question)
 
-    st.write(user_template.replace("{{MSG}}", "hello robot"), unsafe_allow_html=True)
-    st.write(bot_template.replace("{{MSG}}", "hello human"), unsafe_allow_html=True)
+    st.write(user_template.replace("{{MSG}}", "Hello Robot"), unsafe_allow_html=True)
+    st.write(bot_template.replace("{{MSG}}", "Hello Human"), unsafe_allow_html=True)
 
     with st.sidebar:
         st.subheader("Your documents")
