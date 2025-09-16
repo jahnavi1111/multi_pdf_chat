@@ -7,6 +7,7 @@ from langchain.vectorstores import FAISS
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
+from htmlTemplates import css, bot_template, user_template
 
 def get_pdf_text(pdf_docs):
     text = ""
@@ -48,12 +49,17 @@ def main():
     load_dotenv()
     st.set_page_config(page_title = "Chat with multiple PDFs", page_icon=":books:")
 
+    st.write(css, unsafe_allow_html=True)
+
     if "conversation" not in st.session_state:
         # for when application re-runs itself (same session while the appn is open), set it to None if it's not being initialized
         st.session_state.conversation = None 
 
     st.header("Chat with multiple PDFs :books:")
     st.text_input("Ask a question about your uploaded documents:")
+
+    st.write(user_template.replace("{{MSG}}", "hello robot"), unsafe_allow_html=True)
+    st.write(bot_template.replace("{{MSG}}", "hello human"), unsafe_allow_html=True)
 
     with st.sidebar:
         st.subheader("Your documents")
@@ -74,6 +80,8 @@ def main():
                 #create conversation chain
                 #conversation = get_conversation_chain(vector_store)
                 st.session_state.conversation = get_conversation_chain(vector_store) # use to make conversation persistent over time, and also would be available outside of it's scope
+
+
 
 
 
