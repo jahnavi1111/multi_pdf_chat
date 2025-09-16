@@ -13,7 +13,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from transformers import pipeline
 from htmlTemplates import css, bot_template, user_template
 
-
+# yay!
 
 def get_pdf_text(pdf_docs):
     text = ""
